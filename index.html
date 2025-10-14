@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Similaridade Mnemônica (MST) - Versão Aprimorada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Pequeno ajuste para garantir que a transição de opacidade funcione bem com o display do Tailwind */
+        .transition-opacity { transition: opacity 0.3s ease-in-out; }
+        .hidden-item { opacity: 0; pointer-events: none; }
+        .visible-item { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4 font-sans">
+
+    <div class="container bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full p-6 md:p-10 text-center">
+        
+        <div class="header mb-8">
+            <h1 class="text-3xl md:text-4xl font-light text-white mb-2">Teste de Similaridade Mnemônica</h1>
+            <p class="text-gray-400">Avaliação aprimorada de memória e *pattern separation*</p>
+        </div>
+
+        <div id="test-phases" class="relative min-h-[450px]">
+
+            <div id="calibration-phase" class="phase-container absolute w-full transition-opacity">
+                <div class="instructions max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-semibold mb-4 text-cyan-400">Preparação para o Teste</h2>
+                    <div class="bg-gray-700/50 p-6 rounded-lg text-left space-y-3 text-gray-300">
+                        <p>Antes de iniciar, por favor, siga as recomendações abaixo:</p>
+                        <ul class="list-disc list-inside pl-4 space-y-2">
+                            <li>Encontre um ambiente calmo e sem distrações.</li>
+                            <li>Ajuste o brilho da sua tela para um nível confortável.</li>
+                            <li>Mantenha uma distância de aproximadamente um braço da tela.</li>
+                            <li>Utilize seus óculos ou lentes de contato, se necessário.</li>
+                        </ul>
+                        <p class="pt-4 text-center text-cyan-300">Pressione o botão abaixo quando estiver pronto para começar.</p>
+                    </div>
+                </div>
+                <button id="start-instructions-btn" class="mt-8 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all transform hover:scale-105">
+                    Iniciar
+                </button>
+            </div>
+
+            <div id="instruction-phase" class="phase-container absolute w-full transition-opacity hidden-item">
+                <div class="instructions max-w-2xl mx-auto text-left space-y-6">
+                    <h2 class="text-2xl font-semibold text-center text-cyan-400 mb-4">Instruções do Teste</h2>
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Fase 1: Estudo</h3>
+                        <p class="text-gray-400">Você verá uma série de objetos. Para cada um, decida se ele é encontrado tipicamente <strong>DENTRO</strong> ou <strong>FORA</strong> de casa. Tente memorizar cada objeto.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Fase 2: Reconhecimento</h3>
+                        <p class="text-gray-400 mb-3">Você verá objetos novamente e deverá classificá-los como:</p>
+                        <ul class="space-y-2">
+                            <li><strong class="text-green-400">IGUAL:</strong> O objeto é exatamente o mesmo que você viu na Fase 1.</li>
+                            <li><strong class="text-amber-400">SEMELHANTE:</strong> O objeto é parecido, mas não idêntico ao da Fase 1.</li>
+                            <li><strong class="text-red-400">NOVO:</strong> O objeto não apareceu na Fase 1.</li>
+                        </ul>
+                    </div>
+                </div>
+                <button id="start-test-btn" class="mt-8 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all transform hover:scale-105">
+                    Entendi, começar o teste
+                </button>
+            </div>
+            
+            <div id="main-test-phase" class="phase-container absolute w-full transition-opacity hidden-item">
+                <div class="timer text-gray-400 text-lg mb-2" id="phase-title">Fase de Estudo</div>
+                <div class="progress-container w-full bg-gray-700 rounded-full h-2.5 mb-4">
+                    <div id="progress-bar" class="bg-cyan-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-sm text-gray-500 mb-6">0 / 0</p>
+                
+                <div id="stimulus-display" class="relative flex items-center justify-center h-64 md:h-80">
+                    <div id="fixation-cross" class="text-6xl text-gray-600 transition-opacity hidden-item">+</div>
+                    <div id="stimulus-container" class="bg-gray-700 p-8 rounded-xl shadow-lg transition-opacity hidden-item">
+                        <div id="stimulus-content" class="text-8xl md:text-9xl w-48 h-48 md:w-56 md:h-56 flex items-center justify-center"></div>
+                    </div>
+                </div>
+
+                <div id="response-buttons" class="mt-8 flex justify-center gap-4 flex-col sm:flex-row">
+                    </div>
+            </div>
+
+            <div id="results-phase" class="phase-container absolute w-full transition-opacity hidden-item">
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Teste Concluído!</h2>
+                <p class="text-gray-400 mb-6">Obrigado por sua participação. Confira seus resultados abaixo.</p>
+                
+                <div class="results-container bg-gray-700/50 p-6 rounded-lg text-left max-w-2xl mx-auto space-y-6">
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-3">Métricas Principais</h3>
+                        <div id="main-metrics" class="space-y-2"></div>
+                    </div>
+                     <div>
+                        <h3 class="text-xl font-semibold text-white mb-3">Análise Detalhada</h3>
+                        <div id="detailed-metrics" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="export-buttons mt-8 flex justify-center gap-3 flex-wrap">
+                    <button onclick="exportCSV()" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">📊 Exportar CSV</button>
+                    <button onclick="exportJSON()" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">📋 Exportar JSON</button>
+                </div>
+                <button onclick="restartTest()" class="mt-6 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all">
+                    Realizar Novo Teste
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// =================================================================================
+// CONFIGURAÇÕES E ESTADO GLOBAL
+// =================================================================================
+
+const CONFIG = {
+    fixationDuration: 500,  // ms
+    isi: 500,               // Inter-stimulus interval em ms
+    responseTimeout: 8000,  // Tempo máximo para resposta em ms
+    encodingTrials: 64,     // Total de itens na fase de estudo (deve ser par)
+    recognitionTrials: 96   // Total de itens no reconhecimento (múltiplo de 3)
+};
+
+let testState = {};
+
+// Mapeamento de elementos do DOM para acesso rápido
+const DOM = {
+    phases: {
+        calibration: document.getElementById('calibration-phase'),
+        instruction: document.getElementById('instruction-phase'),
+        mainTest: document.getElementById('main-test-phase'),
+        results: document.getElementById('results-phase'),
+    },
+    buttons: {
+        startInstructions: document.getElementById('start-instructions-btn'),
+        startTest: document.getElementById('start-test-btn'),
+        response: document.getElementById('response-buttons'),
+    },
+    display: {
+        phaseTitle: document.getElementById('phase-title'),
+        progressBar: document.getElementById('progress-bar'),
+        progressText: document.getElementById('progress-text'),
+        fixationCross: document.getElementById('fixation-cross'),
+        stimulusContainer: document.getElementById('stimulus-container'),
+        stimulusContent: document.getElementById('stimulus-content'),
+    },
+    results: {
+        mainMetrics: document.getElementById('main-metrics'),
+        detailedMetrics: document.getElementById('detailed-metrics'),
+    }
+};
+
+// =================================================================================
+// LÓGICA DE GERAÇÃO DE ESTÍMULOS
+// =================================================================================
+
+// Usando emojis como placeholders. Em uma aplicação real, seriam URLs de imagens.
+const STIMULI_DB = [
+    { id: 1, target: '🍎', lure: '🍏', semantic: 'inside' }, { id: 2, target: '🚗', lure: '🚙', semantic: 'outside' },
+    { id: 3, target: '🏠', lure: '🏡', semantic: 'inside' }, { id: 4, target: '🌳', lure: '🌲', semantic: 'outside' },
+    { id: 5, target: '🛋️', lure: '🪑', semantic: 'inside' }, { id: 6, target: '✈️', lure: '🛩️', semantic: 'outside' },
+    { id: 7, target: '🍕', lure: '🍔', semantic: 'inside' }, { id: 8, target: '🌸', lure: '🌺', semantic: 'outside' },
+    { id: 9, target: '📺', lure: '🖥️', semantic: 'inside' }, { id: 10, target: '🚲', lure: '🚴', semantic: 'outside' },
+    { id: 11, target: '🔑', lure: '🗝️', semantic: 'inside' }, { id: 12, target: '🌊', lure: '💧', semantic: 'outside' },
+    { id: 13, target: '💡', lure: '🕯️', semantic: 'inside' }, { id: 14, target: '🚂', lure: '🚆', semantic: 'outside' },
+    { id: 15, target: '🕰️', lure: '⏰', semantic: 'inside' }, { id: 16, target: '☀️', lure: '🌤️', semantic: 'outside' },
+    { id: 17, target: '📱', lure: '📞', semantic: 'inside' }, { id: 18, target: '⛵', lure: '🛥️', semantic: 'outside' },
+    { id: 19, target: '🎨', lure: '🖼️', semantic: 'inside' }, { id: 20, target: '🌙', lure: '🌛', semantic: 'outside' },
+    { id: 21, target: '🥐', lure: '🥖', semantic: 'inside' }, { id: 22, target: '⭐', lure: '✨', semantic: 'outside' },
+    { id: 23, target: '🍇', lure: '🍈', semantic: 'inside' }, { id: 24, target: '🚁', lure: '🚡', semantic: 'outside' },
+    { id: 25, target: '🧀', lure: '🧈', semantic: 'inside' }, { id: 26, target: '🛴', lure: '🛹', semantic: 'outside' },
+    { id: 27, target: '🥕', lure: '🌽', semantic: 'inside' }, { id: 28, target: '🚕', lure: '🚖', semantic: 'outside' },
+    { id: 29, target: '🍪', lure: '🍩', semantic: 'inside' }, { id: 30, target: '⛰️', lure: '🏔️', semantic: 'outside' },
+    { id: 31, target: '☕', lure: '🫖', semantic: 'inside' }, { id: 32, target: '🌈', lure: '☔', semantic: 'outside' },
+    { id: 33, target: '👔', lure: '👕', semantic: 'inside' }, { id: 34, target: '🐕', lure: '🐩', semantic: 'outside' },
+    { id: 35, target: '👗', lure: '👘', semantic: 'inside' }, { id: 36, target: '🐈', lure: '🐅', semantic: 'outside' },
+    { id: 37, target: '👟', lure: '👞', semantic: 'inside' }, { id: 38, target: '🐘', lure: '🦣', semantic: 'outside' },
+    { id: 39, target: '🧥', lure: '🥋', semantic: 'inside' }, { id: 40, target: '🦁', lure: '🐆', semantic: 'outside' },
+    { id: 41, target: '👒', lure: '🎩', semantic: 'inside' }, { id: 42, target: '🐧', lure: '🐦', semantic: 'outside' },
+    { id: 43, target: '🧤', lure: '🧣', semantic: 'inside' }, { id: 44, target: '🦋', lure: '🦟', semantic: 'outside' },
+    { id: 45, target: '👜', lure: '💼', semantic: 'inside' }, { id: 46, target: '🐢', lure: '🦎', semantic: 'outside' },
+    { id: 47, target: '👓', lure: '🕶️', semantic: 'inside' }, { id: 48, target: '🦅', lure: '🦆', semantic: 'outside' },
+    // Adicionar mais pares se precisar de mais de 64 trials de codificação
+];
+
+const FOILS_DB = ['🎭', '🎪', '🎯', '🏆', '🎲', '📷', '🔔', '💎', '🧲', '🔭', '⚡', '🎺', '🎻', '🎹', '🎁', '🎈', '🎉', '🎃', '🎄', '🎅', '👽', '👾', '🤖', '👻', '💀', '🔥', '🌍', '🧭', '🏰', '🏟️', '🏭', '🗼'];
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function generateStimuliSets() {
+    const shuffledDB = shuffleArray([...STIMULI_DB]);
+    
+    // Itens para a fase de estudo (codificação)
+    const studyItems = shuffledDB.slice(0, CONFIG.encodingTrials);
+    const studyList = studyItems.map(item => ({
+        id: item.id,
+        stimulus: item.target,
+        semantic: item.semantic,
+    }));
+
+    // Itens que NÃO foram para estudo (usados como foils)
+    const unusedItems = shuffledDB.slice(CONFIG.encodingTrials);
+    const availableFoils = [...FOILS_DB, ...unusedItems.map(item => item.target)];
+
+    // Montar a lista de reconhecimento
+    const recognitionSizePerType = CONFIG.recognitionTrials / 3;
+    const shuffledStudyItems = shuffleArray([...studyItems]);
+
+    // 1/3 Iguais (Targets)
+    const targets = shuffledStudyItems.slice(0, recognitionSizePerType).map(item => ({
+        id: item.id,
+        stimulus: item.target,
+        type: 'target'
+    }));
+
+    // 1/3 Semelhantes (Lures)
+    const lures = shuffledStudyItems.slice(recognitionSizePerType, recognitionSizePerType * 2).map(item => ({
+        id: item.id,
+        stimulus: item.lure,
+        type: 'lure'
+    }));
+
+    // 1/3 Novos (Foils)
+    const foils = shuffleArray(availableFoils).slice(0, recognitionSizePerType).map((stim, index) => ({
+        id: `f_${index}`,
+        stimulus: stim,
+        type: 'foil'
+    }));
+
+    const recognitionList = shuffleArray([...targets, ...lures, ...foils]);
+    
+    return { studyList, recognitionList };
+}
+
+
+// =================================================================================
+// CONTROLE DE FLUXO DO TESTE
+// =================================================================================
+
+function initTestState() {
+    const { studyList, recognitionList } = generateStimuliSets();
+    testState = {
+        participantId: 'MST_' + Date.now(),
+        currentPhaseName: 'calibration',
+        currentTrialIndex: 0,
+        startTime: null,
+        responseEnabled: false,
+        timeoutId: null,
+        studyList,
+        recognitionList,
+        results: {
+            encoding: [],
+            recognition: [],
+        },
+    };
+}
+
+function switchPhase(phaseName) {
+    Object.values(DOM.phases).forEach(phaseEl => phaseEl.classList.add('hidden-item'));
+    if (DOM.phases[phaseName]) {
+        DOM.phases[phaseName].classList.remove('hidden-item');
+        testState.currentPhaseName = phaseName;
+    }
+}
+
+async function runTest() {
+    initTestState();
+    testState.startTime = Date.now();
+    
+    await runEncodingPhase();
+    // Poderia adicionar uma fase de distração aqui
+    await runRecognitionPhase();
+    
+    finishTest();
+}
+
+async function runTrial(trialData, phaseConfig) {
+    return new Promise(async (resolve) => {
+        // 1. Mostrar Cruz de Fixação
+        DOM.display.stimulusContainer.classList.add('hidden-item');
+        DOM.display.fixationCross.classList.remove('hidden-item');
+        await delay(CONFIG.fixationDuration);
+        DOM.display.fixationCross.classList.add('hidden-item');
+        
+        // 2. Mostrar Estímulo
+        DOM.display.stimulusContent.textContent = trialData.stimulus;
+        DOM.display.stimulusContainer.classList.remove('hidden-item');
+        const onsetTime = Date.now();
+        
+        // 3. Aguardar Resposta
+        testState.responseEnabled = true;
+        const responsePromise = new Promise(resolveResponse => {
+            const handleResponse = (response) => {
+                if (!testState.responseEnabled) return;
+                testState.responseEnabled = false;
+                clearTimeout(testState.timeoutId);
+                document.removeEventListener('keydown', handleKeyDown);
+                resolveResponse({ response, rt: Date.now() - onsetTime });
+            };
+            
+            const handleKeyDown = (e) => {
+                if (phaseConfig.keyMap[e.key]) {
+                    handleResponse(phaseConfig.keyMap[e.key]);
+                }
+            };
+
+            DOM.buttons.response.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => handleResponse(btn.dataset.response);
+            });
+            document.addEventListener('keydown', handleKeyDown);
+            
+            testState.timeoutId = setTimeout(() => handleResponse(null), CONFIG.responseTimeout);
+        });
+
+        const userResponse = await responsePromise;
+        
+        // 4. Salvar dados do trial
+        const resultData = { ...trialData, ...userResponse, onsetTime };
+        testState.results[phaseConfig.phaseName].push(resultData);
+
+        // 5. Período Inter-estímulo (ISI)
+        DOM.display.stimulusContainer.classList.add('hidden-item');
+        await delay(CONFIG.isi);
+        
+        resolve();
+    });
+}
+
+// =================================================================================
+// FASES ESPECÍFICAS
+// =================================================================================
+
+async function runEncodingPhase() {
+    switchPhase('mainTest');
+    DOM.display.phaseTitle.textContent = "Fase 1: Estudo";
+    setupResponseButtons('encoding');
+    
+    const phaseConfig = {
+        phaseName: 'encoding',
+        keyMap: { 'd': 'inside', 'f': 'outside' }
+    };
+    
+    for (let i = 0; i < testState.studyList.length; i++) {
+        updateProgress(i, testState.studyList.length);
+        const trialData = testState.studyList[i];
+        await runTrial(trialData, phaseConfig);
+    }
+}
+
+async function runRecognitionPhase() {
+    DOM.display.phaseTitle.textContent = "Fase 2: Reconhecimento";
+    setupResponseButtons('recognition');
+    
+    const phaseConfig = {
+        phaseName: 'recognition',
+        keyMap: { 'j': 'target', 'k': 'lure', 'l': 'foil' }
+    };
+
+    for (let i = 0; i < testState.recognitionList.length; i++) {
+        updateProgress(i, testState.recognitionList.length);
+        const trialData = testState.recognitionList[i];
+        await runTrial(trialData, phaseConfig);
+    }
+}
+
+function finishTest() {
+    calculateResults();
+    displayResults();
+    switchPhase('results');
+}
+
+// =================================================================================
+// CÁLCULO E EXIBIÇÃO DE RESULTADOS
+// =================================================================================
+
+function calculateResults() {
+    const recData = testState.results.recognition;
+    
+    const getProp = (stimType, response) => {
+        const trials = recData.filter(d => d.type === stimType);
+        if (trials.length === 0) return 0;
+        const count = trials.filter(d => d.response === response).length;
+        return count / trials.length;
+    };
+
+    const pOldTarget = getProp('target', 'target'); // Hit rate
+    const pSimilarLure = getProp('lure', 'lure');     // Correct Lure Rejection
+    const pNewFoil = getProp('foil', 'foil');         // Correct Foil Rejection
+    const pOldLure = getProp('lure', 'target');     // Lure False Alarm
+    const pOldFoil = getProp('foil', 'target');     // Foil False Alarm
+
+    // LDI = p("Similar" | Lure) - p("Similar" | Foil)
+    // Usaremos p("Old" | Lure) como uma medida de falha de separação
+    // E p("Old" | Foil) como uma medida de falso alarme geral
+    const ldi = pSimilarLure - pOldFoil;
+
+    const allRTs = recData.filter(d => d.rt).map(d => d.rt);
+    const avgRT = allRTs.length ? allRTs.reduce((a, b) => a + b, 0) / allRTs.length : 0;
+    
+    testState.finalScores = {
+        hitRate: pOldTarget,
+        lureCorrectRejection: pSimilarLure,
+        foilCorrectRejection: pNewFoil,
+        lureFalseAlarm: pOldLure,
+        foilFalseAlarm: pOldFoil,
+        ldi,
+        avgRT,
+        totalDuration: Math.round((Date.now() - testState.startTime) / 1000)
+    };
+}
+
+function displayResults() {
+    const r = testState.finalScores;
+
+    const createMetric = (label, value) => `
+        <div class="flex justify-between items-center py-2 border-b border-gray-600">
+            <span class="text-gray-400">${label}</span>
+            <span class="font-bold text-cyan-400 text-lg">${value}</span>
+        </div>`;
+
+    DOM.results.mainMetrics.innerHTML = 
+        createMetric("Índice de Discriminação (LDI)", r.ldi.toFixed(3)) +
+        createMetric("Taxa de Acertos (Iguais)", `${(r.hitRate * 100).toFixed(1)}%`) +
+        createMetric("Discriminação de Semelhantes", `${(r.lureCorrectRejection * 100).toFixed(1)}%`);
+
+    DOM.results.detailedMetrics.innerHTML = 
+        createMetric("Rejeição de Novos", `${(r.foilCorrectRejection * 100).toFixed(1)}%`) +
+        createMetric("Erro com Semelhantes (Lure FA)", `${(r.lureFalseAlarm * 100).toFixed(1)}%`) +
+        createMetric("Falso Alarme (Novos)", `${(r.foilFalseAlarm * 100).toFixed(1)}%`) +
+        createMetric("Tempo de Reação Médio", `${Math.round(r.avgRT)} ms`) +
+        createMetric("Duração Total", `${r.totalDuration} s`);
+}
+
+// =================================================================================
+// FUNÇÕES AUXILIARES E DE UI
+// =================================================================================
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+function updateProgress(current, total) {
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    DOM.display.progressBar.style.width = `${percentage}%`;
+    DOM.display.progressText.textContent = `${current} / ${total}`;
+}
+
+function setupResponseButtons(phase) {
+    let buttonsHTML = '';
+    if (phase === 'encoding') {
+        buttonsHTML = `
+            <button data-response="inside" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg w-full sm:w-48 transition">DENTRO (D)</button>
+            <button data-response="outside" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-lg w-full sm:w-48 transition">FORA (F)</button>
+        `;
+    } else if (phase === 'recognition') {
+        buttonsHTML = `
+            <button data-response="target" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg w-full sm:w-48 transition">IGUAL (J)</button>
+            <button data-response="lure" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-6 rounded-lg w-full sm:w-48 transition">SEMELHANTE (K)</button>
+            <button data-response="foil" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg w-full sm:w-48 transition">NOVO (L)</button>
+        `;
+    }
+    DOM.buttons.response.innerHTML = buttonsHTML;
+}
+
+function restartTest() {
+    if (confirm('Tem certeza que deseja reiniciar o teste?')) {
+        location.reload();
+    }
+}
+
+// =================================================================================
+// EXPORTAÇÃO DE DADOS
+// =================================================================================
+
+function downloadFile(content, filename, contentType) {
+    const blob = new Blob([content], { type: contentType });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function exportCSV() {
+    let csv = 'ParticipantID,Phase,Trial,StimulusID,Stimulus,Type,Response,RT,Timestamp\n';
+    testState.results.encoding.forEach((t, i) => {
+        csv += `${testState.participantId},encoding,${i+1},${t.id},${t.stimulus},target,${t.response || ''},${t.rt || ''},${t.onsetTime}\n`;
+    });
+    testState.results.recognition.forEach((t, i) => {
+        csv += `${testState.participantId},recognition,${i+1},${t.id},${t.stimulus},${t.type},${t.response || ''},${t.rt || ''},${t.onsetTime}\n`;
+    });
+    downloadFile(csv, `MST_data_${testState.participantId}.csv`, 'text/csv');
+}
+
+function exportJSON() {
+    const dataToExport = {
+        participantId: testState.participantId,
+        config: CONFIG,
+        scores: testState.finalScores,
+        rawData: testState.results
+    };
+    const json = JSON.stringify(dataToExport, null, 2);
+    downloadFile(json, `MST_data_${testState.participantId}.json`, 'application/json');
+}
+
+// =================================================================================
+// INICIALIZAÇÃO E EVENT LISTENERS
+// =================================================================================
+
+DOM.buttons.startInstructions.addEventListener('click', () => switchPhase('instruction'));
+DOM.buttons.startTest.addEventListener('click', runTest);
+window.addEventListener('load', () => switchPhase('calibration'));
+
+</script>
+</body>
+</html>
